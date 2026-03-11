@@ -162,23 +162,7 @@ function App() {
         // If it fails, we should technically revert the optimistic update here, 
         // but the realtime listener usually catches it anyway.
       } else {
-        // If approved, trigger N8N Workflow 2 via webhook
-        if (action === 'approved') {
-          const img = pendingImages.find(i => i.id === id);
-          if (img) {
-            fetch('https://orrlabs.app.n8n.cloud/webhook/rchie-image-approve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'approve',
-                date: img.generation_date,
-                slug: img.story_slug,
-                ghost_post_id: img.ghost_post_id,
-                drive_web_url: img.drive_web_url
-              })
-            }).catch(e => console.error('Webhook failed:', e));
-          }
-        }
+        // Status updated in DB. The backend cron will sweep it up and publish it.
       }
     } catch (err) {
       console.error(err)
