@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-import { Activity, Clock, AlertTriangle, CheckCircle2, Flame, LayoutDashboard, Server } from 'lucide-react'
+import { Activity, Clock, AlertTriangle, CheckCircle2, Flame, LayoutDashboard, Server, ShieldCheck, XCircle, AlertCircle } from 'lucide-react'
 
 function App() {
   const [agents, setAgents] = useState([])
   const [metrics, setMetrics] = useState(null)
+  const [watchdogChecks, setWatchdogChecks] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -32,6 +33,15 @@ function App() {
       } else {
         setMetrics(metricData)
       }
+
+      // Fetch watchdog status
+      const { data: watchdogData, error: watchdogError } = await supabase
+        .from('erd_watchdog_status')
+        .select('*')
+        .order('id')
+      
+      if (watchdogError) console.error('Error fetching watchdog:', watchdogError)
+      else setWatchdogChecks(watchdogData)
       
       setLoading(false)
     }
@@ -45,7 +55,7 @@ function App() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'erd_agent_health' },
         (payload) => {
-          console.log('Realtime change received!', payload)
+          console.log('Realtime change received for agents!', payload)
           if (payload.eventType === 'UPDATE') {
             setAgents(currentAgents => 
               currentAgents.map(agent => 
@@ -71,9 +81,32 @@ function App() {
       )
       .subscribe()
 
+    // Subscribe to realtime changes for watchdog
+    const watchdogChannel = supabase
+      .channel('erd_watchdog_status_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'erd_watchdog_status' },
+        (payload) => {
+          if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+            setWatchdogChecks(current => {
+              // If it's an insert and not in array, add it, else update
+              const exists = current.find(c => c.id === payload.new.id);
+              if (exists) {
+                return current.map(check => check.id === payload.new.id ? payload.new : check);
+              } else {
+                return [...current, payload.new].sort((a, b) => a.id.localeCompare(b.id));
+              }
+            })
+          }
+        }
+      )
+      .subscribe()
+
     return () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(metricsChannel)
+      supabase.removeChannel(watchdogChannel)
     }
   }, [])
 
@@ -106,6 +139,14 @@ function App() {
     return str.replace(/_/g, ' ');
   }
 
+  // Determine overall watchdog health status
+  const watchdogHasFail = watchdogChecks.some(c => c.status === 'fail');
+  const watchdogHasWarn = watchdogChecks.some(c => c.status === 'warn');
+  const systemStatusColor = watchdogHasFail ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]' : 
+                            watchdogHasWarn ? 'bg-rchie-amber shadow-[0_0_10px_rgba(245,166,35,0.6)]' : 
+                            'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]';
+  const systemStatusText = watchdogHasFail ? 'System Critical' : watchdogHasWarn ? 'System Warning' : 'System Nominal';
+
   return (
     <div className="min-h-screen bg-rchie-charcoal text-rchie-white p-8 font-sans">
       <div className="max-w-5xl mx-auto">
@@ -117,8 +158,8 @@ function App() {
             <p className="text-gray-400 mt-2">ARIA Live Orchestration Dashboard</p>
           </div>
           <div className="flex items-center space-x-3 bg-gray-900/50 px-4 py-2 rounded-full border border-gray-800">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
-            <span className="text-sm font-medium text-gray-300">System Nominal</span>
+            <div className={`w-2.5 h-2.5 rounded-full ${systemStatusColor}`}></div>
+            <span className="text-sm font-medium text-gray-300">{systemStatusText}</span>
           </div>
         </header>
 
@@ -128,6 +169,33 @@ function App() {
           </div>
         ) : (
           <>
+            {/* System Integrity Watchdog */}
+            <div className="mb-14">
+              <div className="flex items-center space-x-3 mb-6">
+                <ShieldCheck className="w-6 h-6 text-blue-400" />
+                <h2 className="text-2xl font-bold tracking-tight">System Integrity Watchdog</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {watchdogChecks.map((check) => (
+                  <div key={check.id} className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 flex items-start space-x-4 transition-all hover:border-gray-700">
+                    <div className="mt-1">
+                      {check.status === 'pass' && <CheckCircle2 className="w-6 h-6 text-emerald-500" />}
+                      {check.status === 'warn' && <AlertCircle className="w-6 h-6 text-rchie-amber" />}
+                      {check.status === 'fail' && <XCircle className="w-6 h-6 text-red-500" />}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-200">{check.name}</h3>
+                      <p className="text-sm text-gray-400 mt-1">{check.message}</p>
+                      <p className="text-xs text-gray-600 mt-2 font-mono">
+                        {new Date(check.last_checked_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Content Pipeline Metrics */}
             {metrics && (
               <div className="mb-14">
