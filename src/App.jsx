@@ -420,12 +420,16 @@ function App() {
                       <div key={img.id} className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden flex flex-col hover:border-gray-700 transition-all">
                         {/* Image Preview Window */}
                         <div className="relative aspect-video bg-gray-950 flex items-center justify-center overflow-hidden border-b border-gray-800">
-                          {/* Note: Google Drive webViewLink often requires auth. In a real app, you might proxy this or use a thumbnail endpoint. */}
-                          <iframe 
-                            src={img.drive_web_url.replace('/view', '/preview')} 
-                            className="w-full h-full border-0 absolute inset-0" 
-                            title="Image Preview"
-                          ></iframe>
+                          <img 
+                            src={`https://drive.google.com/thumbnail?id=${img.drive_file_id}&sz=w800`}
+                            alt={img.story_slug}
+                            className="w-full h-full object-cover absolute inset-0 opacity-90 hover:opacity-100 transition-opacity"
+                            onError={(e) => {
+                              // Fallback if thumbnail endpoint fails
+                              e.target.onerror = null; 
+                              e.target.src = `https://drive.google.com/uc?id=${img.drive_file_id}&export=view`;
+                            }}
+                          />
                           <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-md text-xs font-mono font-bold text-white z-10">
                             {img.story_slug}
                           </div>
