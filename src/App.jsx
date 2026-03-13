@@ -4,6 +4,7 @@ import { Activity, Clock, AlertTriangle, CheckCircle2, Flame, LayoutDashboard, S
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [showLogsModal, setShowLogsModal] = useState(false)
   const [agents, setAgents] = useState([])
   const [metrics, setMetrics] = useState(null)
   const [watchdogChecks, setWatchdogChecks] = useState([])
@@ -234,6 +235,13 @@ function App() {
                     {pendingImages.length}
                   </span>
                 )}
+                            </button>
+              <button 
+                onClick={() => setShowLogsModal(true)}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center text-gray-400 hover:text-white hover:bg-gray-800/50"
+              >
+                <Server className="w-4 h-4 mr-2" />
+                System Logs
               </button>
             </div>
           </div>
@@ -254,33 +262,6 @@ function App() {
             {/* --- DASHBOARD TAB --- */}
             {activeTab === 'dashboard' && (
               <div className="animate-in fade-in duration-300">
-                {/* System Integrity Watchdog */}
-                <div className="mb-14">
-                  <div className="flex items-center space-x-3 mb-6">
-                    <ShieldCheck className="w-6 h-6 text-blue-400" />
-                    <h2 className="text-2xl font-bold tracking-tight">System Integrity Watchdog</h2>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {watchdogChecks.map((check) => (
-                      <div key={check.id} className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 flex items-start space-x-4 transition-all hover:border-gray-700">
-                        <div className="mt-1">
-                          {check.status === 'pass' && <CheckCircle2 className="w-6 h-6 text-emerald-500" />}
-                          {check.status === 'warn' && <AlertCircle className="w-6 h-6 text-rchie-amber" />}
-                          {check.status === 'fail' && <XCircle className="w-6 h-6 text-red-500" />}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-200">{check.name}</h3>
-                          <p className="text-sm text-gray-400 mt-1">{check.message}</p>
-                          <p className="text-xs text-gray-600 mt-2 font-mono">
-                            {new Date(check.last_checked_at).toLocaleTimeString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Content Pipeline Metrics */}
                 {metrics && (
                   <div className="mb-14">
@@ -342,49 +323,10 @@ function App() {
                   </div>
                 )}
 
-                {/* Agent Grid */}
-                <div>
-                  <div className="flex items-center space-x-3 mb-6">
-                    <Server className="w-6 h-6 text-emerald-500" />
-                    <h2 className="text-2xl font-bold tracking-tight">Agent Swarm Vitals</h2>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {agents.map((agent) => (
-                      <div 
-                        key={agent.id} 
-                        className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6 transition-all hover:border-gray-700"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-3 h-3 rounded-full ${getStatusColor(agent.status)}`}></div>
-                            <h2 className="text-xl font-semibold tracking-wide capitalize">{agent.agent_id}</h2>
-                          </div>
-                          {getStatusIcon(agent.status)}
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Current State</p>
-                            <p className="text-lg capitalize font-medium text-gray-200">
-                              {agent.status}
-                            </p>
-                          </div>
-
-                          <div className="pt-4 border-t border-gray-800 flex justify-between items-center text-sm">
-                            <span className="text-gray-500">Last Ping</span>
-                            <span className="text-gray-300 font-mono text-xs">
-                              {agent.last_heartbeat ? new Date(agent.last_heartbeat).toLocaleTimeString() : 'Never'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                
               </div>
             )}
-
-            {/* --- IMAGE TRIAGE TAB --- */}
+{/* --- IMAGE TRIAGE TAB --- */}
             {activeTab === 'triage' && (
               <div className="animate-in fade-in duration-300">
                 <div className="flex items-center space-x-3 mb-8 border-b border-gray-800 pb-6">
@@ -451,7 +393,101 @@ function App() {
           </>
         )}
       </main>
-    </div>
+    
+      {/* SYSTEM LOGS MODAL */}
+      {showLogsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-6xl my-8 p-8 relative shadow-2xl">
+            <button 
+              onClick={() => setShowLogsModal(false)}
+              className="absolute top-6 right-6 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-full p-2 transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="mb-8 border-b border-gray-800 pb-4">
+              <h2 className="text-3xl font-bold text-white flex items-center">
+                <Server className="w-8 h-8 mr-3 text-rchie-amber" />
+                System Diagnostics & Logs
+              </h2>
+              <p className="text-gray-400 mt-2">Operational plumbing, agent vitals, and watchdog checks.</p>
+            </div>
+            <div className="space-y-12">
+              {/* System Integrity Watchdog */}
+                <div className="mb-14">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <ShieldCheck className="w-6 h-6 text-blue-400" />
+                    <h2 className="text-2xl font-bold tracking-tight">System Integrity Watchdog</h2>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {watchdogChecks.map((check) => (
+                      <div key={check.id} className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 flex items-start space-x-4 transition-all hover:border-gray-700">
+                        <div className="mt-1">
+                          {check.status === 'pass' && <CheckCircle2 className="w-6 h-6 text-emerald-500" />}
+                          {check.status === 'warn' && <AlertCircle className="w-6 h-6 text-rchie-amber" />}
+                          {check.status === 'fail' && <XCircle className="w-6 h-6 text-red-500" />}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-200">{check.name}</h3>
+                          <p className="text-sm text-gray-400 mt-1">{check.message}</p>
+                          <p className="text-xs text-gray-600 mt-2 font-mono">
+                            {new Date(check.last_checked_at).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                
+              {/* Agent Grid */}
+                <div>
+                  <div className="flex items-center space-x-3 mb-6">
+                    <Server className="w-6 h-6 text-emerald-500" />
+                    <h2 className="text-2xl font-bold tracking-tight">Agent Swarm Vitals</h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {agents.map((agent) => (
+                      <div 
+                        key={agent.id} 
+                        className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6 transition-all hover:border-gray-700"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${getStatusColor(agent.status)}`}></div>
+                            <h2 className="text-xl font-semibold tracking-wide capitalize">{agent.agent_id}</h2>
+                          </div>
+                          {getStatusIcon(agent.status)}
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Current State</p>
+                            <p className="text-lg capitalize font-medium text-gray-200">
+                              {agent.status}
+                            </p>
+                          </div>
+
+                          <div className="pt-4 border-t border-gray-800 flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Last Ping</span>
+                            <span className="text-gray-300 font-mono text-xs">
+                              {agent.last_heartbeat ? new Date(agent.last_heartbeat).toLocaleTimeString() : 'Never'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            
+            </div>
+          </div>
+        </div>
+      )}
+</div>
   )
 }
 
