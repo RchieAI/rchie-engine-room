@@ -9,6 +9,7 @@ function App() {
   const [metrics, setMetrics] = useState(null)
   const [watchdogChecks, setWatchdogChecks] = useState([])
   const [pendingImages, setPendingImages] = useState([])
+  const [activityFeed, setActivityFeed] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -56,7 +57,16 @@ function App() {
       if (imageError) console.error('Error fetching images:', imageError)
       else setPendingImages(imageData)
       
+      
+      // Fetch activity feed
+      const { data: feedData, error: feedError } = await supabase
+        .from('erd_activity_feed')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10)
+      if (!feedError) setActivityFeed(feedData)
       setLoading(false)
+
     }
 
     fetchData()
@@ -139,7 +149,20 @@ function App() {
       )
       .subscribe()
 
+    
+    const activityChannel = supabase
+      .channel('erd_activity_feed_changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'erd_activity_feed' },
+        (payload) => {
+          setActivityFeed(current => [payload.new, ...current].slice(0, 10))
+        }
+      )
+      .subscribe()
     return () => {
+      supabase.removeChannel(activityChannel)
+
       supabase.removeChannel(channel)
       supabase.removeChannel(metricsChannel)
       supabase.removeChannel(watchdogChannel)
@@ -322,6 +345,28 @@ function App() {
                     </div>
                   </div>
                 )}
+
+
+                  <div className="mt-12 mb-14">
+                    <div className="flex items-center space-x-3 mb-6">
+                      <Activity className="w-6 h-6 text-blue-400" />
+                      <h2 className="text-2xl font-bold tracking-tight">Recent Activity</h2>
+                    </div>
+                    <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
+                      <ul className="divide-y divide-gray-800/50">
+                        {activityFeed.length === 0 ? (
+                          <li className="p-6 text-center text-gray-500 italic text-sm">Awaiting activity data...</li>
+                        ) : activityFeed.map((item, idx) => (
+                          <li key={item.id || idx} className="p-4 flex items-center space-x-4 hover:bg-gray-800/20 transition-colors">
+                            <div className={`w-2 h-2 rounded-full ${item.status === 'success' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : item.status === 'error' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : item.status === 'warning' ? 'bg-rchie-amber' : 'bg-blue-400'}`}></div>
+                            <div className="text-sm font-medium text-gray-400 w-24 capitalize">{item.agent_id}</div>
+                            <div className="text-sm text-gray-200 flex-1">{item.action}</div>
+                            <div className="text-xs text-gray-500 font-mono">{new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
 
                 </div>
             )}
