@@ -323,10 +323,10 @@ function App() {
                   </div>
                 )}
 
-                
-              </div>
+                </div>
             )}
-{/* --- IMAGE TRIAGE TAB --- */}
+
+            {/* --- IMAGE TRIAGE TAB --- */}
             {activeTab === 'triage' && (
               <div className="animate-in fade-in duration-300">
                 <div className="flex items-center space-x-3 mb-8 border-b border-gray-800 pb-6">
@@ -392,12 +392,11 @@ function App() {
             )}
           </>
         )}
-      </main>
-    
+      
       {/* SYSTEM LOGS MODAL */}
       {showLogsModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-6xl my-8 p-8 relative shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto" style={{ paddingTop: '5vh', paddingBottom: '5vh' }}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-6xl p-8 relative shadow-2xl overflow-y-auto" style={{ maxHeight: '90vh' }}>
             <button 
               onClick={() => setShowLogsModal(false)}
               className="absolute top-6 right-6 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-full p-2 transition-all"
@@ -479,15 +478,14 @@ function App() {
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
-
-            
+              
             </div>
           </div>
         </div>
       )}
-</div>
+
+      </main>
+    </div>
   )
 }
 
