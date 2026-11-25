@@ -5,6 +5,7 @@ import { Activity, Clock, AlertTriangle, CheckCircle2, Flame, LayoutDashboard, S
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [showLogsModal, setShowLogsModal] = useState(false)
+  const [rejectModal, setRejectModal] = useState({ show: false, imageId: null, reason: '' })
   const [agents, setAgents] = useState([])
   const [metrics, setMetrics] = useState(null)
   const [watchdogChecks, setWatchdogChecks] = useState([])
@@ -171,6 +172,15 @@ function App() {
   }, [])
 
   const handleImageAction = async (id, action) => {
+    if (action === 'rejected') {
+      setRejectModal({ show: true, imageId: id, reason: '' });
+      return;
+    }
+    await processImageAction(id, action, null);
+  }
+
+  const processImageAction = async (id, action, reason) => {
+
     try {
       // First update UI optimistically
       setPendingImages(current => current.filter(img => img.id !== id))
@@ -178,7 +188,7 @@ function App() {
       // Then update database
       const { error } = await supabase
         .from('erd_image_triage')
-        .update({ status: action, updated_at: new Date().toISOString() })
+        .update({ status: action, reject_reason: reason, updated_at: new Date().toISOString() })
         .eq('id', id)
         
       if (error) {
@@ -530,7 +540,42 @@ function App() {
       )}
 
       </main>
-    </div>
+  
+      {/* REJECT REASON MODAL */}
+      {rejectModal.show && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-4">Why are you rejecting this?</h3>
+            <p className="text-sm text-gray-400 mb-4">Your feedback helps Rchie rewrite better image prompts.</p>
+            <textarea 
+              className="w-full bg-gray-950 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-rchie-amber mb-4"
+              rows="3"
+              placeholder="e.g. Too cyberpunk, text is melted, robot has 6 fingers..."
+              value={rejectModal.reason}
+              onChange={(e) => setRejectModal({...rejectModal, reason: e.target.value})}
+            />
+            <div className="flex space-x-3 justify-end">
+              <button 
+                onClick={() => setRejectModal({show: false, imageId: null, reason: ''})}
+                className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  processImageAction(rejectModal.imageId, 'rejected', rejectModal.reason);
+                  setRejectModal({show: false, imageId: null, reason: ''});
+                }}
+                className="px-4 py-2 rounded-lg text-sm bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 font-medium"
+              >
+                Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+  </div>
   )
 }
 
